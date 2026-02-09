@@ -23,7 +23,7 @@ class DBConnWrapper:
         fetch_result = await self.conn.fetch(query.sql, *query.args)
 
         if not fetch_result:
-            return None
+            return []
 
         return [query.model.model_validate(dict(x)) for x in fetch_result]
 
