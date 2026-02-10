@@ -1,7 +1,7 @@
 import requests
 import yaml
 
-id = "5af4e21201a7588ac2441fcfb5943c93f53a38c8e2ccc1346d96333506780239"
+id = ""
 action = "ban"  # ban or unban
 delete = 1  # 1 for True, 0 for False, only applies on Ban
 

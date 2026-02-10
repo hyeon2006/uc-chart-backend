@@ -529,7 +529,7 @@ def get_account_stats(sonolus_id: str) -> SelectQuery[UserStats]:
                 SELECT COUNT(*)
                 FROM charts ch
                 WHERE ch.author = a.sonolus_id
-                AND ch.visibility = 'PUBLIC'
+                AND ch.status = 'PUBLIC'
             ) AS charts_published,
 
             (
