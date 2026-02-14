@@ -85,6 +85,18 @@ async def delete_profile_hash(
             detail="Cannot modify another user's profile",
         )
 
+    # Delete all files under profile/
+    async with app.s3_session_getter() as s3:
+        bucket = await s3.Bucket(app.s3_bucket)
+        batch = []
+        async for obj in bucket.objects.filter(Prefix=f"{id}/profile/"):
+            batch.append({"Key": obj.key})
+            if len(batch) == 1000:
+                await bucket.delete_objects(Delete={"Objects": batch})
+                batch = []
+        if batch:
+            await bucket.delete_objects(Delete={"Objects": batch})
+
     query = accounts.update_profile_hash(id, None)
 
     async with app.db_acquire() as conn:
@@ -107,6 +119,18 @@ async def delete_banner_hash(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot modify another user's banner",
         )
+
+    # Delete all files under banner/
+    async with app.s3_session_getter() as s3:
+        bucket = await s3.Bucket(app.s3_bucket)
+        batch = []
+        async for obj in bucket.objects.filter(Prefix=f"{id}/banner/"):
+            batch.append({"Key": obj.key})
+            if len(batch) == 1000:
+                await bucket.delete_objects(Delete={"Objects": batch})
+                batch = []
+        if batch:
+            await bucket.delete_objects(Delete={"Objects": batch})
 
     query = accounts.update_banner_hash(id, None)
 
