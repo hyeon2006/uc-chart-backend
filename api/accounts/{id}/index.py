@@ -15,6 +15,9 @@ import io
 
 router = APIRouter()
 
+PROFILE_SIZE = (400, 400)
+BANNER_SIZE = (1200, 360)
+
 
 @router.delete("/")
 async def main_delete(request: Request, id: str):
@@ -190,12 +193,26 @@ async def upload_profile(
             detail="File size exceeds limit",
         )
 
-    # Convert to WebP
-    try:
-        image = Image.open(io.BytesIO(file_content))
+    # Convert to PNG and WebP with resizing
+    def convert_images(content: bytes) -> tuple[bytes, bytes]:
+        image = Image.open(io.BytesIO(content))
+        image = image.convert("RGB")
+        image = image.resize(PROFILE_SIZE, Image.Resampling.LANCZOS)
+
+        # PNG
+        png_buffer = io.BytesIO()
+        image.save(png_buffer, format="PNG")
+        png_bytes = png_buffer.getvalue()
+
+        # WebP
         webp_buffer = io.BytesIO()
         image.save(webp_buffer, format="WEBP")
         webp_bytes = webp_buffer.getvalue()
+
+        return png_bytes, webp_bytes
+
+    try:
+        png_bytes, webp_bytes = await app.run_blocking(convert_images, file_content)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -203,15 +220,25 @@ async def upload_profile(
         )
 
     # Calculate hash
-    file_hash = calculate_sha256(webp_bytes)
+    file_hash = calculate_sha256(png_bytes)
 
     # Upload to S3
     async with app.s3_session_getter() as s3:
         bucket = await s3.Bucket(app.s3_bucket)
-        path = f"{session.sonolus_id}/profile/{file_hash}"
+
+        # Upload PNG
+        path_png = f"{session.sonolus_id}/profile/{file_hash}"
+        await bucket.upload_fileobj(
+            Fileobj=io.BytesIO(png_bytes),
+            Key=path_png,
+            ExtraArgs={"ContentType": "image/png"},
+        )
+
+        # Upload WebP
+        path_webp = f"{session.sonolus_id}/profile/{file_hash}_webp"
         await bucket.upload_fileobj(
             Fileobj=io.BytesIO(webp_bytes),
-            Key=path,
+            Key=path_webp,
             ExtraArgs={"ContentType": "image/webp"},
         )
 
@@ -249,12 +276,26 @@ async def upload_banner(
             detail="File size exceeds limit",
         )
 
-    # Convert to WebP
-    try:
-        image = Image.open(io.BytesIO(file_content))
+    # Convert to PNG and WebP with resizing
+    def convert_images(content: bytes) -> tuple[bytes, bytes]:
+        image = Image.open(io.BytesIO(content))
+        image = image.convert("RGB")
+        image = image.resize(BANNER_SIZE, Image.Resampling.LANCZOS)
+
+        # PNG
+        png_buffer = io.BytesIO()
+        image.save(png_buffer, format="PNG")
+        png_bytes = png_buffer.getvalue()
+
+        # WebP
         webp_buffer = io.BytesIO()
         image.save(webp_buffer, format="WEBP")
         webp_bytes = webp_buffer.getvalue()
+
+        return png_bytes, webp_bytes
+
+    try:
+        png_bytes, webp_bytes = await app.run_blocking(convert_images, file_content)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -262,15 +303,25 @@ async def upload_banner(
         )
 
     # Calculate hash
-    file_hash = calculate_sha256(webp_bytes)
+    file_hash = calculate_sha256(png_bytes)
 
     # Upload to S3
     async with app.s3_session_getter() as s3:
         bucket = await s3.Bucket(app.s3_bucket)
-        path = f"{session.sonolus_id}/banner/{file_hash}"
+
+        # Upload PNG
+        path_png = f"{session.sonolus_id}/banner/{file_hash}"
+        await bucket.upload_fileobj(
+            Fileobj=io.BytesIO(png_bytes),
+            Key=path_png,
+            ExtraArgs={"ContentType": "image/png"},
+        )
+
+        # Upload WebP
+        path_webp = f"{session.sonolus_id}/banner/{file_hash}_webp"
         await bucket.upload_fileobj(
             Fileobj=io.BytesIO(webp_bytes),
-            Key=path,
+            Key=path_webp,
             ExtraArgs={"ContentType": "image/webp"},
         )
 
