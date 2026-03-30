@@ -211,12 +211,11 @@ def get_chart_list(
     if conditions:
         inner_select += " WHERE " + " AND ".join(conditions)
 
-    W_LIKE = 3
-    W_COMMENT = 4
-    W_STAFF = 30
+    W_LIKE = 4
+    W_PLAYER = 5
     GRAVITY = 0.35
 
-    score_expr = f"(like_count * {W_LIKE} + comment_count * {W_COMMENT} + (CASE WHEN staff_pick THEN {W_STAFF} ELSE 0 END))"
+    score_expr = f"(like_count * {W_LIKE} + unique_player_count * {W_PLAYER})"
 
     decaying_score_sql = f"""(
         ({score_expr}) 
@@ -299,6 +298,7 @@ def get_random_charts(
             c.rating,
             c.like_count,
             c.comment_count,
+            (SELECT COUNT(DISTINCT submitter) FROM leaderboards WHERE chart_id = c.id) AS unique_player_count,
             c.created_at,
             c.published_at,
             c.updated_at,
